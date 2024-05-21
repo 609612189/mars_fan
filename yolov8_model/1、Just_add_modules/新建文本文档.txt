@@ -1,0 +1,4 @@
+只改动以下文件：
+ultralytics\cfg\models\My-Add
+ultralytics\nn\Addmodules
+ultralytics\nn\tasks.py

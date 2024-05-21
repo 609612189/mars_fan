@@ -1,0 +1,1 @@
+在anchor point max box size大于ground true box mean size的前提下，tal.py中, box_iou 改成 (box_iou+kpt_iou)÷2。

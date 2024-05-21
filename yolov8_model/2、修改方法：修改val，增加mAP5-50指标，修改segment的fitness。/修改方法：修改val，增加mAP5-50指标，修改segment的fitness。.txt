@@ -1,0 +1,80 @@
+
+========开始：修改val，增加mAP5-50指标，修改segment的fitness。temp37-17。=====================
+1、能计算IoU更小的mAP，比如mAP10。下面的改完后，控制台打印结果，和runs里的打印结果，都和之前完全一致。
+
+models/yolo/detect/val.py的__init__()方法的39行，self.iouv = torch.linspace(0.5, 0.95, 10)  # iou vector for mAP@0.5:0.95，改成self.iouv = torch.linspace(0.05, 0.95, 19)  # iou vector for mAP@0.05:0.95 。
+
+utils/metrics.py。修改522行，class Metric(SimpleClass):类的，def ap50(self):、def ap(self):、def map50(self):、def map75(self):、def map(self):方法。
+
+utils/metrics.py。修改422行，def ap_per_class(tp, 方法，489行，494行，500行。
+        # r_curve[ci] = np.interp(-x, -conf[i], recall[:, 0], left=0)  # negative x, xp because xp decreases
+        r_curve[ci] = np.interp(-x, -conf[i], recall[:, 9], left=0)  # negative x, xp because xp decreases
+
+        # p_curve[ci] = np.interp(-x, -conf[i], precision[:, 0], left=1)  # p at pr_score
+        p_curve[ci] = np.interp(-x, -conf[i], precision[:, 9], left=1)  # p at pr_score
+
+            # if plot and j == 0:
+            if plot and j == 9:
+
+2、怎么在控制台打印和result.csv，加个mAP5-50。
+utils/metrics.py。class Metric(SimpleClass):类增加方法：
+    @property
+    def map5to50(self):
+        return self.all_ap[:,0:10].mean() if len(self.all_ap) else 0.0
+
+utils/metrics.py。修改class SegmentMetrics(SimpleClass):类的以下方法：keys、results_dict、mean_results、fitness。
+
+models/yolo/segment/val.py的60行def get_desc(self):方法，用于打印控制台。
+    def get_desc(self):
+        """Return a formatted description of evaluation metrics."""
+        return ('%22s' + '%11s' * 10) % ('Class', 'Images', 'Instances', 'Box(P', 'R', 'mAP50', 'mAP5-50', 'mAP50-95)', 'Mask(P',
+                                         'R', 'mAP50','mAP5-50', 'mAP50-95)')
+
+3、改画图，画result.png，把mAP5-50也加上去。
+修改models/yolo/segment/train.py的def plot_metrics(self):方法。
+    def plot_metrics(self):
+        my_plot_results(file=self.csv, segment=True, on_plot=self.on_plot)  # save results.png
+
+在utils/plotting.py加入方法my_plot_results()。这个方法必须放在utils/plotting.py，不能放到models/yolo/segment/train.py。不然@plt_settings()里面会报错。
+@plt_settings()
+def my_plot_results(file='path/to/results.csv', dir='', segment=True,  on_plot=None):
+    import pandas as pd
+    from scipy.ndimage import gaussian_filter1d
+    save_dir = Path(file).parent if file else Path(dir)
+
+    if segment:
+        fig, ax = plt.subplots(4, 5, figsize=(12, 12), tight_layout=True)
+        index = [1, 2, 3, 4, 0,
+                 15, 16, 17, 18, 0,
+                 5, 6, 10, 11, 0,
+                 7, 8, 9, 12, 13, 14]
+
+    ax = ax.ravel()
+    files = list(save_dir.glob('results*.csv'))
+    assert len(files), f'No results.csv files found in {save_dir.resolve()}, nothing to plot.'
+    for f in files:
+        try:
+            data = pd.read_csv(f)
+            s = [x.strip() for x in data.columns]
+            x = data.values[:, 0]
+            for i, j in enumerate(index):
+                if i in [4, 9, 14]:
+                    plt.delaxes(ax[i])
+                    continue
+                y = data.values[:, j].astype('float')
+                # y[y == 0] = np.nan  # don't show zero values
+                ax[i].plot(x, y, marker='.', label=f.stem, linewidth=2, markersize=8)  # actual results
+                ax[i].plot(x, gaussian_filter1d(y, sigma=3), ':', label='smooth', linewidth=2)  # smoothing line
+                ax[i].set_title(s[j], fontsize=12)
+                # if j in [8, 9, 10]:  # share train and val loss y axes
+                #     ax[i].get_shared_y_axes().join(ax[i], ax[i - 5])
+        except Exception as e:
+            LOGGER.warning(f'WARNING: Plotting error for {f}: {e}')
+    ax[1].legend()
+    fname = save_dir / 'results.png'
+    fig.savefig(fname, dpi=200)
+    plt.close()
+    if on_plot:
+        on_plot(fname)
+========结束：修改val，增加mAP5-50指标，修改segment的fitness。temp37-17。=====================
+

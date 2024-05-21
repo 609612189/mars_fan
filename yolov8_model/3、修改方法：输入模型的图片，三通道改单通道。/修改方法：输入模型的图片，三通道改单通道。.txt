@@ -1,0 +1,12 @@
+======开始：temp41-multi-task-3通道改单通道。只改了model.train()的，没有改model.val()和model.predict()的。==========================
+参考：SingleChannel Train #7526 https://github.com/ultralytics/ultralytics/issues/7526#issuecomment-1980013205。
+修改位置：
+1、
+nn/tasks.py的BaseModel类的def predict(self, x, profile=False, visualize=False, augment=False):方法，增加一行：x=x.mean(dim=1, keepdim=True) # 我的：x是shape=[batch,channel,图片大小，图片大小]的Tensor，举例：[2,3,1280,1280]，这里把三通道转单通道。。
+2、
+在yolov8-multi.yaml文件加个"ch: 1"，因为会在nn/task.py的class DetectionModel(BaseModel):类的def __init__(self, cfg='yolov8n.yaml', ch=3, nc=None, verbose=True):方法的ch = self.yaml['ch'] = self.yaml.get('ch', ch)  # input channels ，从模型yaml文件中得到通道数。
+
+3、/utils/checks.py
+-        assert amp_allclose(YOLO("yolov8n.pt"), im)
++        # assert amp_allclose(YOLO("yolov8n.pt"), im)
+=======结束：temp41-multi-task-3通道改单通道==========================
