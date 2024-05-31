@@ -1,6 +1,7 @@
 '''
 就是拿训练好的模型，在 用clipAllMars.py裁剪全火星CTX得到的25m/px、1280px的图片 上跑，得到全火星上，框、点的预测结果。
 框用框的IoU来去重，点也根据框的IoU来去重。最后用得到的预测框、点的结果，生成框的shapefile文件、点的shapefile文件。
+预测出来的的框、点的shapefile的坐标系，和https://www.sciencedirect.com/science/article/pii/S2352340922006886 下载的冲积扇的数据集完全一致。
 '''
 
 # 如果是用detect、pose、segment这些官方有的任务，可以直接用下面这个导包。
